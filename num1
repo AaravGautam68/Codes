@@ -1,1 +1,147 @@
+import tkinter as tk
+from tkinter import messagebox
+import random
+
+class TicTacToeGUI:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Tic Tac Toe - GUI")
+
+        self.player_mark = "X"
+        self.ai_mark = "O"
+
+        self.buttons = {}
+        self.create_menu()
+        self.reset_board()
+
+    # ---------------- MENU -----------------
+    def create_menu(self):
+        menu = tk.Menu(self.root)
+        self.root.config(menu=menu)
+
+        game_menu = tk.Menu(menu, tearoff=0)
+        menu.add_cascade(label="Game", menu=game_menu)
+        game_menu.add_command(label="New Game", command=self.reset_board)
+        game_menu.add_command(label="Quit", command=self.root.quit)
+
+        options_menu = tk.Menu(menu, tearoff=0)
+        menu.add_cascade(label="Options", menu=options_menu)
+        options_menu.add_command(label="Play as X", command=lambda: self.set_player_mark("X"))
+        options_menu.add_command(label="Play as O", command=lambda: self.set_player_mark("O"))
+
+    def set_player_mark(self, mark):
+        self.player_mark = mark
+        self.ai_mark = "O" if mark == "X" else "X"
+        self.reset_board()
+
+    # --------------- GAME LOGIC ----------------
+    def reset_board(self):
+        if hasattr(self, "frame"):
+            self.frame.destroy()
+
+        self.board = [" "] * 9
+
+        self.frame = tk.Frame(self.root, bg="#333")
+        self.frame.pack(pady=10)
+
+        self.buttons = {}
+        for i in range(9):
+            btn = tk.Button(
+                self.frame,
+                text="",
+                font=("Arial", 30, "bold"),
+                width=4,
+                height=2,
+                bg="#444",
+                fg="white",
+                activebackground="#666",
+                command=lambda i=i: self.player_move(i)
+            )
+            btn.grid(row=i//3, column=i%3, padx=5, pady=5)
+            self.buttons[i] = btn
+
+        # If user plays O, AI should go first
+        if self.player_mark == "O":
+            self.root.after(300, self.ai_move)
+
+    def player_move(self, index):
+        if self.board[index] != " ":
+            return
+
+        self.board[index] = self.player_mark
+        self.buttons[index].configure(text=self.player_mark, fg="#33FF57")
+
+        if self.check_winner(self.player_mark):
+            self.end_game("You win! 🎉")
+            return
+
+        if " " not in self.board:
+            self.end_game("It's a draw!")
+            return
+
+        self.root.after(300, self.ai_move)
+
+    def ai_move(self):
+        available = [i for i, v in enumerate(self.board) if v == " "]
+
+        if not available:
+            return
+
+        # Simple AI: win -> block -> random
+        move = self.find_best_move()
+        if move is None:
+            move = random.choice(available)
+
+        self.board[move] = self.ai_mark
+        self.buttons[move].configure(text=self.ai_mark, fg="#FF3347")
+
+        if self.check_winner(self.ai_mark):
+            self.end_game("AI wins! 🤖")
+            return
+
+        if " " not in self.board:
+            self.end_game("It's a draw!")
+
+    # --------------- AI SMART MOVE ----------------
+    def find_best_move(self):
+        wins = [
+            (0,1,2),(3,4,5),(6,7,8),
+            (0,3,6),(1,4,7),(2,5,8),
+            (0,4,8),(2,4,6)
+        ]
+
+        # 1. AI can win?
+        for a,b,c in wins:
+            if self.board[a] == self.board[b] == self.ai_mark and self.board[c] == "": return c
+            if self.board[b] == self.board[c] == self.ai_mark and self.board[a] == "": return a
+            if self.board[a] == self.board[c] == self.ai_mark and self.board[b] == "": return b
+
+        # 2. Player can win? Block it
+        for a,b,c in wins:
+            if self.board[a] == self.board[b] == self.player_mark and self.board[c] == " ": return c
+            if self.board[b] == self.board[c] == self.player_mark and self.board[a] == " ": return a
+            if self.board[a] == self.board[c] == self.player_mark and self.board[b] == " ": return b
+
+        return None
+
+    # --------------- CHECK WIN ----------------
+    def check_winner(self, mark):
+        wins = [
+            (0,1,2),(3,4,5),(6,7,8),
+            (0,3,6),(1,4,7),(2,5,8),
+            (0,4,8),(2,4,6)
+        ]
+        return any(self.board[a] == self.board[b] == self.board[c] == mark for a,b,c in wins)
+
+    # --------------- END GAME ----------------
+    def end_game(self, message):
+        if messagebox.askyesno("Game Over", message + "\n\nPlay again?"):
+            self.reset_board()
+        else:
+            self.root.quit()
+
+# --------------- RUN GUI ----------------
+root = tk.Tk()
+game = TicTacToeGUI(root)
+root.mainloop()
 
